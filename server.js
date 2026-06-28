@@ -1,57 +1,82 @@
 const express = require("express");
-const mysql = require("mysql2");
+const cors = require("cors");
 
 const app = express();
 
-app.use(express.static(__dirname));
-app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(express.json());
 
-// MySQL Connection
-const db = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "",
-    database: "agri_allied"
+// In-memory data
+let crops = [
+  { id: 1, name: "Wheat", season: "Rabi" },
+  { id: 2, name: "Rice", season: "Kharif" }
+];
+
+// GET All Crops
+app.get("/api/crops", (req, res) => {
+  res.status(200).json(crops);
 });
 
-db.connect((err) => {
-    if (err) {
-        console.log("Database Connection Error:", err);
-        return;
-    }
-    console.log("MySQL Connected");
+// GET Single Crop
+app.get("/api/crops/:id", (req, res) => {
+  const crop = crops.find(c => c.id == req.params.id);
+
+  if (!crop) {
+    return res.status(404).json({ message: "Crop not found" });
+  }
+
+  res.status(200).json(crop);
 });
 
-// Home Route
+// POST Crop
+app.post("/api/crops", (req, res) => {
+  const newCrop = {
+    id: crops.length + 1,
+    name: req.body.name,
+    season: req.body.season
+  };
+
+  crops.push(newCrop);
+
+  res.status(201).json(newCrop);
+});
+
+// PUT Crop
+app.put("/api/crops/:id", (req, res) => {
+  const crop = crops.find(c => c.id == req.params.id);
+
+  if (!crop) {
+    return res.status(404).json({ message: "Crop not found" });
+  }
+
+  crop.name = req.body.name;
+  crop.season = req.body.season;
+
+  res.status(200).json(crop);
+});
+
+// DELETE Crop
+app.delete("/api/crops/:id", (req, res) => {
+  crops = crops.filter(c => c.id != req.params.id);
+
+  res.status(204).send();
+});
+
+// SEARCH Crop
+app.get("/api/search", (req, res) => {
+  const q = (req.query.q || "").toLowerCase();
+
+  const result = crops.filter(c =>
+    c.name.toLowerCase().includes(q)
+  );
+
+  res.status(200).json(result);
+});
+
 app.get("/", (req, res) => {
-    res.send("Agri-Allied Server Running");
+  res.send("Agri-Allied Backend Running");
 });
 
-// Login Route
-app.post("/login", (req, res) => {
-
-    const { email, password } = req.body;
-
-    const sql =
-        "SELECT * FROM users WHERE email = ? AND password = ?";
-
-    db.query(sql, [email, password], (err, result) => {
-
-        if (err) {
-            console.log(err);
-            return res.send("Database Error");
-        }
-
-        if (result.length > 0) {
-            res.redirect("/dashboard.html");
-        } else {
-            res.send("Invalid Email or Password");
-        }
-
-    });
-
-});
-
-app.listen(3000, () => {
-    console.log("Server running on http://localhost:3000");
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
 });
